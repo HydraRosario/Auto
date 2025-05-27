@@ -7,7 +7,7 @@ from .sub_agents.web_searcher_agent.agent import web_searcher_agent
 from google.adk.models.lite_llm import LiteLlm
 
 model = LiteLlm(
-    model="groq/llama-3.3-70b-versatile",
+    model="groq/qwen-qwq-32b",
     api_key=os.getenv("GROQ_API_KEY"),
 )
 

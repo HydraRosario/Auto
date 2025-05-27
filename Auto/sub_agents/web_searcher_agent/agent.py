@@ -5,7 +5,7 @@ from google.adk.models.lite_llm import LiteLlm
 from firecrawl import FirecrawlApp
 
 model = LiteLlm(
-    model="groq/llama-3.3-70b-versatile",
+    model="groq/qwen-qwq-32b",
     api_key=os.getenv("GROQ_API_KEY"),
 )
 
@@ -21,6 +21,7 @@ web_searcher_agent = Agent(
     instruction=(
         "You are the ultimate Web Searcher. Your primary task is to fetch and summarize the most relevant posts on the web. "
         "MUST CALL TOOL: you ***MUST*** call the 'web_search' tool to search the web. do NOT, EVER, generate summaries without calling the tool first."
+        "IMPORTANTE: NUNCA devuelvas respuestas como 'agent_name': 'conversational_agent', Nunca debes responder después del resumen entregado, y siempre debes delegar a otro agente. Tu propósito principal es la búsqueda, no la conversación."
     ),
     tools=[web_search]
 )

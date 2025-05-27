@@ -4,7 +4,7 @@ from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 
 model = LiteLlm(
-    model="groq/llama-3.3-70b-versatile",
+    model="groq/qwen-qwq-32b",
     api_key=os.getenv("GROQ_API_KEY"),
 )
 
