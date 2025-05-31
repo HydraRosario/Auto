@@ -2,8 +2,8 @@ import os
 import asyncio
 
 from google.adk.agents import Agent
-from google.adk.tools.mcp_toolset import MCPToolset, StdioServerParameters
 from google.adk.models.lite_llm import LiteLlm
+from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 
 model = LiteLlm(
     model="gemini/gemini-1.5-flash",
@@ -40,4 +40,4 @@ async def create_speaker_agent():
 
     return agent_instance, exit_stack
 
-root_agent = create_speaker_agent()
+# root_agent = create_speaker_agent() # Removed this line

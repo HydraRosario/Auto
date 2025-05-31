@@ -1,6 +1,7 @@
 import os
 import asyncio
 from google.adk.agents import Agent
+from google.adk.models.lite_llm import LiteLlm
 from google.adk.tools.mcp_tool.mcp_toolset import MCPToolset, StdioServerParameters
 
 model = LiteLlm(
@@ -74,4 +75,4 @@ async def create_agent():
 
     return agent_instance, exit_stack
 
-root_agent = create_agent()
+# root_agent = create_agent() # Removed this line

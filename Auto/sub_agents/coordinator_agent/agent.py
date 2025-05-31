@@ -3,46 +3,66 @@ from contextlib import AsyncExitStack
 from google.adk.agents import Agent
 from google.adk.models.lite_llm import LiteLlm
 
-model = LiteLlm(
-    model="gemini/gemini-1.5-flash",
+# Import factory functions for sub-agents that coordinator_agent will manage
+from ..reddit_scout_agent.agent import create_agent as create_reddit_scout_agent
+#from ..summarizer_agent.agent import create_summarizer_agent 
+from ..speaker_agent.agent import create_speaker_agent
+
+# Model for the coordinator_agent itself
+coordinator_model = LiteLlm(
+    model="gemini/gemini-1.5-flash", 
     api_key=os.getenv("GOOGLE_API_KEY"),
 )
 
-# Sub-agent factories
-from reddit_scout_agent import create_agent as create_reddit_scout_agent
-from summarizer.agent import create_summarizer_agent
-from speaker_agent.agent import create_agent as create_speaker_agent
-
 async def create_coordinator_agent():
-    """Creates the coordinator agent and its sub-agents."""
+    """Creates the coordinator agent and its internally managed sub-agents (news pipeline)."""
     
-    exit_Stack = AsyncExitStack()
-    await exit_stack.__aenter__()
-    
+    # This exit_stack is for resources managed by coordinator_agent's sub-agents
+    internal_exit_stack = AsyncExitStack()
+    await internal_exit_stack.__aenter__() 
+
+    # 1. Create Reddit Scout Agent (asynchronous)
     reddit_agent, reddit_stack = await create_reddit_scout_agent()
-    await exit_stack.enter_async_context(reddit_stack)
+    if hasattr(reddit_stack, '__aenter__'):
+        await internal_exit_stack.enter_async_context(reddit_stack)
 
-    summarizer_agent = create_summarizer_agent()
+    # 2. Create Summarizer Agent (synchronous)
+    #summarizer_agent_instance = create_summarizer_agent() 
 
-    speaker_agent, speaker_stack = await create_speaker_agent()
-    await exit_stack.enter_async_context(speaker_stack)
+    # 3. Create Speaker Agent (asynchronous)
+    speaker_agent_instance, speaker_stack = await create_speaker_agent()
+    if hasattr(speaker_stack, '__aenter__'):
+        await internal_exit_stack.enter_async_context(speaker_stack)
 
-    coordinator_agent = Agent(
-        name="coordinator_agent",
-        model=model,
-        description="Coordinator Management Agent that coordinates between subagents",
+    pipeline_sub_agents = {
+        "reddit_scout": reddit_agent,
+        #"summarizer": summarizer_agent_instance,
+        "speaker": speaker_agent_instance
+    }
+
+    coordinator_agent_instance = Agent(
+        name="news_pipeline_coordinator_agent", 
+        model=coordinator_model,
+        description="Coordinates a pipeline of agents (Reddit scout, summarizer, speaker) to generate and present news briefings.",
         instruction="""
-        You are a manager agent that is responsible for overseeing the work of the other agents.
+        You are a News Pipeline Coordinator. Your goal is to produce a news briefing from Reddit.
+        Follow these steps:
+        1. Determine the subreddit from the user's request.
+        2. Use the 'reddit_scout' agent to fetch hot posts from that subreddit.
+        3. Take the output from 'reddit_scout' and pass it to the 'summarizer' agent to get a newscaster-style summary.
+        4. Take the summary from 'summarizer' and pass it to the 'speaker' agent to convert it to speech (use voice 'Will').
+        5. Present the final result, which might be the spoken audio URL or the text summary if speech fails.
         
-        Always delegate the task to the appropiate agent. Use your best judgement to determine which agent is the best fit for the task.
+        You have access to the following internal agents to achieve this:
+        - reddit_scout: Fetches Reddit posts.
+        - summarizer: Summarizes text in a newscaster style.
+        - speaker: Converts text to speech.
 
-        You are responsible for delegating task to the following agent:
-        - conversational_agent (for general conversation) 
-        - web_searcher_agent (for web search)
+        If any step fails, report the failure gracefully.
         """,
-        sub_agents=[reddit_agent, summarizer_agent, speaker_agent],
+        sub_agents=[reddit_agent, speaker_agent_instance], 
     )
 
-    return coordinator_agent, exit_stack
+    return coordinator_agent_instance, internal_exit_stack
     
-root_agent = create_coordinator_agent()
+# root_agent = create_coordinator_agent() 
