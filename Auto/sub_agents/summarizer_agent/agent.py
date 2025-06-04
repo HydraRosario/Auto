@@ -8,7 +8,7 @@ def create_summarizer_agent():
     # Define a LiteLlm instance for summarization (can adjust model as needed)
     llm = LiteLlm(model="gemini/gemini-1.5-pro-latest", api_key=os.environ.get("GOOGLE_API_KEY"))
 
-    summarizer = Agent(
+    summarizer_agent = Agent(
         name="newscaster_summarizer_agent",
         description="Summarizes a list of Reddit post titles in a newscaster style.",
         model=llm,
@@ -20,6 +20,7 @@ def create_summarizer_agent():
             "Refer to subreddits by name, no need to mention 'r/'."
         )
     )
-    return summarizer
+    return summarizer_agent
 
-# root_agent = create_summarizer_agent() # Removed for orchestration
+# Expose root_agent for ADK
+root_agent = create_summarizer_agent()

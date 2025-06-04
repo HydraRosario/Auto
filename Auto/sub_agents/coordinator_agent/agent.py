@@ -5,7 +5,7 @@ from google.adk.models.lite_llm import LiteLlm
 
 # Import factory functions for sub-agents that coordinator_agent will manage
 from ..reddit_scout_agent.agent import create_agent as create_reddit_scout_agent
-#from ..summarizer_agent.agent import create_summarizer_agent 
+from ..summarizer_agent.agent import create_summarizer_agent 
 from ..speaker_agent.agent import create_speaker_agent
 
 # Model for the coordinator_agent itself
@@ -27,7 +27,7 @@ async def create_coordinator_agent():
         await internal_exit_stack.enter_async_context(reddit_stack)
 
     # 2. Create Summarizer Agent (synchronous)
-    #summarizer_agent_instance = create_summarizer_agent() 
+    summarizer_agent_instance = create_summarizer_agent() 
 
     # 3. Create Speaker Agent (asynchronous)
     speaker_agent_instance, speaker_stack = await create_speaker_agent()
@@ -36,7 +36,7 @@ async def create_coordinator_agent():
 
     pipeline_sub_agents = {
         "reddit_scout": reddit_agent,
-        #"summarizer": summarizer_agent_instance,
+        "summarizer": summarizer_agent_instance,
         "speaker": speaker_agent_instance
     }
 
@@ -60,9 +60,9 @@ async def create_coordinator_agent():
 
         If any step fails, report the failure gracefully.
         """,
-        sub_agents=[reddit_agent, speaker_agent_instance], 
+        sub_agents=[reddit_agent, speaker_agent_instance, summarizer_agent_instance], 
     )
 
     return coordinator_agent_instance, internal_exit_stack
     
-# root_agent = create_coordinator_agent() 
+root_agent = create_coordinator_agent() 
