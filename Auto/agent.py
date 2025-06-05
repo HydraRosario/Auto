@@ -9,12 +9,10 @@ from google.adk.models.lite_llm import LiteLlm
 
 # Importar agentes sincrónicos directamente
 from .sub_agents.conversational_agent.agent import conversational_agent
-from .sub_agents.summarizer_agent.agent import root_agent as summarizer_agent
 
 # Importar factory functions para agentes que requieren async
 from .sub_agents.reddit_scout_agent.agent import create_agent as create_reddit_scout_agent
 from .sub_agents.speaker_agent.agent import create_speaker_agent
-from .sub_agents.coordinator_agent.agent import create_coordinator_agent
 
 # Importar web searcher (convertido a sincrono)
 from .sub_agents.web_searcher_agent.agent import web_searcher_agent
@@ -69,24 +67,6 @@ def initialize_async_agents():
                     instruction="Sorry, text-to-speech functionality is currently unavailable due to MCP server issues."
                 )
             
-            # Coordinator Agent
-            print("🔧 Initializing Coordinator Agent...")
-            try:
-                coordinator_agent, coordinator_stack = await create_coordinator_agent()
-                agents['coordinator'] = coordinator_agent
-                if coordinator_stack and hasattr(coordinator_stack, '__aenter__'):
-                    exit_stacks.append(coordinator_stack)
-                print("✅ Coordinator Agent initialized")
-            except Exception as e:
-                print(f"⚠️ Coordinator Agent failed: {e}")
-                # Crear agente dummy
-                agents['coordinator'] = Agent(
-                    name="coordinator_dummy",
-                    model=model,
-                    description="News pipeline coordinator (disabled - dependency issues)",
-                    instruction="Sorry, news pipeline functionality is currently unavailable due to dependency issues."
-                )
-            
             return agents, exit_stacks
             
         except Exception as e:
@@ -117,14 +97,12 @@ def initialize_async_agents():
 print("🚀 Initializing Auto Multi-Agent System...")
 async_agents, exit_stacks = initialize_async_agents()
 
-# Crear lista de todos los sub-agentes
+# Crear lista de todos los sub-agentes (sin coordinador ni resumidor)
 all_sub_agents = [
     conversational_agent,
     web_searcher_agent,
-    summarizer_agent,
     async_agents.get('reddit_scout'),
-    async_agents.get('speaker'), 
-    async_agents.get('coordinator')
+    async_agents.get('speaker')
 ]
 
 # Filtrar agentes None
@@ -144,34 +122,29 @@ root_agent = Agent(
     AVAILABLE AGENTS:
     🗣️ conversational_agent - For general conversation, advice, casual chat, emotional support
     🔍 web_searcher_agent - For web searches, finding information online, research tasks
-    📰 coordinator_agent - For complete Reddit news briefings (fetch → summarize → speak)
-    📋 reddit_scout_agent - For direct Reddit post fetching (standalone use)
+    📋 reddit_scout_agent - For Reddit post fetching from subreddits
     🔊 speaker_agent - For text-to-speech conversion
-    📝 summarizer_agent - For text summarization tasks
     
     DELEGATION STRATEGY:
     1. **Casual Conversation** → conversational_agent
        - General chat, advice, emotional support
        - Personal questions, casual discussions
+       - Follow-up conversations about any topic
        
     2. **Information Seeking** → web_searcher_agent
        - "Search for...", "Find information about...", "What's happening with..."
        - Research tasks, current events, facts
+       - Any web-based information retrieval
        
-    3. **Reddit News** → coordinator_agent
-       - "News briefing from r/...", "What's happening in r/..."
-       - Complete news pipeline with audio output
-       
-    4. **Reddit Posts Only** → reddit_scout_agent
+    3. **Reddit Content** → reddit_scout_agent
        - "Show me posts from r/...", "What are the hot posts in..."
-       - Just fetching posts without summarization
+       - "Get Reddit content from...", "Browse r/..."
+       - Fetching posts from specific subreddits
        
-    5. **Text-to-Speech** → speaker_agent
+    4. **Text-to-Speech** → speaker_agent
        - "Read this aloud", "Convert to speech", "Make audio of..."
-       
-    6. **Summarization** → summarizer_agent
-       - "Summarize this text", "Give me a summary of..."
-       - Text condensation tasks
+       - "Speak this text", "Generate voice from..."
+       - Audio conversion requests
     
     DECISION PROCESS:
     1. Analyze the user's request to identify the primary intent
@@ -186,11 +159,14 @@ root_agent = Agent(
     - If multiple agents could handle a task, choose the most specific one
     - Provide clear context when delegating
     - Handle gracefully if an agent is unavailable
+    - For ambiguous requests, ask for clarification before delegating
     
     FALLBACK BEHAVIOR:
     - If a specialized agent fails, inform the user and offer alternatives
-    - For ambiguous requests, ask for clarification before delegating
     - Always maintain a helpful and professional tone
+    - Suggest alternative approaches when primary methods fail
+    
+    Remember: You are a coordinator, not a direct service provider. Your strength lies in intelligent task delegation to specialized agents.
     """,
     tools=agent_tools,
     sub_agents=all_sub_agents,
