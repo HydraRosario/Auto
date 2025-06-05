@@ -11,7 +11,7 @@ from google.adk.models.lite_llm import LiteLlm
 from .sub_agents.conversational_agent.agent import conversational_agent
 
 # Importar factory functions para agentes que requieren async
-from .sub_agents.reddit_scout_agent.agent import create_agent as create_reddit_scout_agent
+from .sub_agents.file_system_agent.agent import create_agent as create_file_system_agent
 from .sub_agents.speaker_agent.agent import create_speaker_agent
 
 # Importar web searcher (convertido a sincrono)
@@ -31,22 +31,22 @@ def initialize_async_agents():
         exit_stacks = []
         
         try:
-            # Reddit Scout Agent
-            print("🔧 Initializing Reddit Scout Agent...")
+            # File System Agent
+            print("🔧 Initializing File System Agent...")
             try:
-                reddit_agent, reddit_stack = await create_reddit_scout_agent()
-                agents['reddit_scout'] = reddit_agent
-                if reddit_stack and hasattr(reddit_stack, '__aenter__'):
-                    exit_stacks.append(reddit_stack)
-                print("✅ Reddit Scout Agent initialized")
+                fs_agent, fs_stack = await create_file_system_agent()
+                agents['file_system'] = fs_agent
+                if fs_stack and hasattr(fs_stack, '__aenter__'):
+                    exit_stacks.append(fs_stack)
+                print("✅ File System Agent initialized")
             except Exception as e:
-                print(f"⚠️ Reddit Scout Agent failed: {e}")
+                print(f"⚠️ File System Agent failed: {e}")
                 # Crear agente dummy para evitar fallos
-                agents['reddit_scout'] = Agent(
-                    name="reddit_scout_dummy",
+                agents['file_system'] = Agent(
+                    name="file_system_dummy",
                     model=model,
-                    description="Reddit scout agent (disabled - MCP server unavailable)",
-                    instruction="Sorry, Reddit functionality is currently unavailable due to MCP server issues."
+                    description="File System agent (disabled - MCP server unavailable)",
+                    instruction="Sorry, File System functionality is currently unavailable due to MCP server issues."
                 )
             
             # Speaker Agent
@@ -101,7 +101,7 @@ async_agents, exit_stacks = initialize_async_agents()
 all_sub_agents = [
     conversational_agent,
     web_searcher_agent,
-    async_agents.get('reddit_scout'),
+    async_agents.get('file_system'),
     async_agents.get('speaker')
 ]
 
@@ -122,7 +122,7 @@ root_agent = Agent(
     AVAILABLE AGENTS:
     🗣️ conversational_agent - For general conversation, advice, casual chat, emotional support
     🔍 web_searcher_agent - For web searches, finding information online, research tasks
-    📋 reddit_scout_agent - For Reddit post fetching from subreddits
+    📁 file_system_agent - For file system operations (read, write, move, delete, create files/directories)
     🔊 speaker_agent - For text-to-speech conversion
     
     DELEGATION STRATEGY:
@@ -136,10 +136,11 @@ root_agent = Agent(
        - Research tasks, current events, facts
        - Any web-based information retrieval
        
-    3. **Reddit Content** → reddit_scout_agent
-       - "Show me posts from r/...", "What are the hot posts in..."
-       - "Get Reddit content from...", "Browse r/..."
-       - Fetching posts from specific subreddits
+    3. **File System Operations** → file_system_agent
+       - "Read file...", "Create a file...", "Delete file...", "Move file..."
+       - "List directory contents", "Show me files in...", "Copy file..."
+       - "Write to file...", "Edit file...", "Create directory..."
+       - Any file or directory manipulation tasks
        
     4. **Text-to-Speech** → speaker_agent
        - "Read this aloud", "Convert to speech", "Make audio of..."
@@ -160,6 +161,14 @@ root_agent = Agent(
     - Provide clear context when delegating
     - Handle gracefully if an agent is unavailable
     - For ambiguous requests, ask for clarification before delegating
+    
+    FILE SYSTEM DELEGATION EXAMPLES:
+    - "Read the content of /home/user/document.txt" → file_system_agent
+    - "Create a new file with my notes" → file_system_agent
+    - "List all files in the Downloads folder" → file_system_agent
+    - "Delete the temporary files" → file_system_agent
+    - "Move this file to another directory" → file_system_agent
+    - "Show me what's in this folder" → file_system_agent
     
     FALLBACK BEHAVIOR:
     - If a specialized agent fails, inform the user and offer alternatives
